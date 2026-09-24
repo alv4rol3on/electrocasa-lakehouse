@@ -15,6 +15,6 @@ targets:
 
   prod:
     mode: production
-
     workspace:
       host: https://adb-7405612901422253.13.azuredatabricks.net
+      root_path: /Workspace/Users/prueba01@lz4lv4rojoaqu1noutlook.onmicrosoft.com/.bundle/${bundle.name}/${bundle.target}
