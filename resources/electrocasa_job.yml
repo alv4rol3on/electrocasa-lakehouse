@@ -1,0 +1,12 @@
+resources:
+  jobs:
+    electrocasa_job:
+      name: ElectroCasa Job
+
+      tasks:
+        - task_key: ingest_catalogo
+          sql_task:
+            file:
+              path: ../src/electrocasa/utils/ingest_catalogo.sql
+              source: WORKSPACE
+            warehouse_id: bb69341e7dac12fe
