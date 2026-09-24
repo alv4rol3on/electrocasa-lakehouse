@@ -1,7 +1,10 @@
 from pyspark import pipelines as dp
 from pyspark.sql import functions as F
-from pyspark.sql.window import Window
 
+
+# ================================================================
+# PREPARAR CATALOGO
+# ================================================================
 
 @dp.temporary_view(name="catalogo_preparado")
 def catalogo_preparado():
@@ -44,23 +47,38 @@ def catalogo_preparado():
             F.lower(F.trim(F.col("categoria"))) == "cocina",
             F.lit("cocina")
         )
-        .otherwise(F.lower(F.trim(F.col("categoria"))))
+        .otherwise(
+            F.lower(F.trim(F.col("categoria")))
+        )
     )
 
     # ============================================================
     # IDENTIFICAR PRODUCTOS DUPLICADOS
     # ============================================================
 
-    window_producto = Window.partitionBy("producto_id")
-
-    df = df.withColumn(
-        "_cantidad_producto_id",
-        F.count("*").over(window_producto)
+    duplicados = (
+        df
+        .groupBy("producto_id")
+        .count()
+        .filter(F.col("count") > 1)
+        .select("producto_id")
+        .withColumn("_producto_id_duplicado", F.lit(True))
     )
 
-    df = df.withColumn(
-        "_producto_id_duplicado",
-        F.col("_cantidad_producto_id") > 1
+    df = (
+        df
+        .join(
+            duplicados,
+            on="producto_id",
+            how="left"
+        )
+        .withColumn(
+            "_producto_id_duplicado",
+            F.coalesce(
+                F.col("_producto_id_duplicado"),
+                F.lit(False)
+            )
+        )
     )
 
     return df
@@ -78,15 +96,14 @@ def catalogo_preparado():
     "precio_lista_valido",
     "precio_lista IS NOT NULL AND precio_lista > 0"
 )
-@dp.expect_or_drop(
-    "producto_id_unico",
-    "_producto_id_duplicado = false"
-)
 def catalogo_silver():
 
     return (
         spark.read.table("catalogo_preparado")
-        .drop("_cantidad_producto_id", "_producto_id_duplicado")
+        .filter(
+            F.col("_producto_id_duplicado") == False
+        )
+        .drop("_producto_id_duplicado")
     )
 
 
@@ -105,9 +122,9 @@ def catalogo_quarantine():
     return (
         df
         .filter(
-            (F.col("precio_lista").isNull())
+            F.col("_producto_id_duplicado")
+            | F.col("precio_lista").isNull()
             | (F.col("precio_lista") <= 0)
-            | F.col("_producto_id_duplicado")
         )
         .withColumn(
             "motivo_rechazo",
@@ -123,11 +140,13 @@ def catalogo_quarantine():
                 F.col("precio_lista") <= 0,
                 F.lit("precio_lista_menor_igual_cero")
             )
-            .otherwise(F.lit("otro"))
+            .otherwise(
+                F.lit("otro")
+            )
         )
         .withColumn(
             "fecha_rechazo",
             F.current_timestamp()
         )
-        .drop("_cantidad_producto_id", "_producto_id_duplicado")
+        .drop("_producto_id_duplicado")
     )
