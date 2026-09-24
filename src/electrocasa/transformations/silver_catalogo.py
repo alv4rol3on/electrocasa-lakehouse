@@ -3,19 +3,12 @@ from pyspark.sql import functions as F
 
 
 # ================================================================
-# PREPARAR CATALOGO
+# FUNCION PARA NORMALIZAR CATEGORIA
 # ================================================================
 
-@dp.temporary_view(name="catalogo_preparado")
-def catalogo_preparado():
+def normalizar_categoria(df):
 
-    df = spark.read.table("electrocasa.bronze.catalogo_bronze")
-
-    # ============================================================
-    # NORMALIZAR CATEGORIA
-    # ============================================================
-
-    df = df.withColumn(
+    return df.withColumn(
         "categoria",
         F.when(
             F.lower(F.trim(F.col("categoria"))).isin(
@@ -52,37 +45,6 @@ def catalogo_preparado():
         )
     )
 
-    # ============================================================
-    # IDENTIFICAR PRODUCTOS DUPLICADOS
-    # ============================================================
-
-    duplicados = (
-        df
-        .groupBy("producto_id")
-        .count()
-        .filter(F.col("count") > 1)
-        .select("producto_id")
-        .withColumn("_producto_id_duplicado", F.lit(True))
-    )
-
-    df = (
-        df
-        .join(
-            duplicados,
-            on="producto_id",
-            how="left"
-        )
-        .withColumn(
-            "_producto_id_duplicado",
-            F.coalesce(
-                F.col("_producto_id_duplicado"),
-                F.lit(False)
-            )
-        )
-    )
-
-    return df
-
 
 # ================================================================
 # CATALOGO SILVER
@@ -98,13 +60,33 @@ def catalogo_preparado():
 )
 def catalogo_silver():
 
-    return (
-        spark.read.table("catalogo_preparado")
-        .filter(
-            F.col("_producto_id_duplicado") == False
-        )
-        .drop("_producto_id_duplicado")
+    df = spark.read.table(
+        "electrocasa.bronze.catalogo_bronze"
     )
+
+    # Normalizar categoría
+    df = normalizar_categoria(df)
+
+    # Obtener producto_id que aparecen más de una vez
+    duplicados = (
+        df
+        .groupBy("producto_id")
+        .count()
+        .filter(F.col("count") > 1)
+        .select("producto_id")
+    )
+
+    # Eliminar todas las filas pertenecientes a IDs duplicados
+    df = (
+        df
+        .join(
+            duplicados,
+            on="producto_id",
+            how="left_anti"
+        )
+    )
+
+    return df
 
 
 # ================================================================
@@ -117,33 +99,72 @@ def catalogo_silver():
 )
 def catalogo_quarantine():
 
-    df = spark.read.table("catalogo_preparado")
+    df = spark.read.table(
+        "electrocasa.bronze.catalogo_bronze"
+    )
+
+    # Normalizar categoría
+    df = normalizar_categoria(df)
+
+    # Obtener IDs duplicados
+    duplicados = (
+        df
+        .groupBy("producto_id")
+        .count()
+        .filter(F.col("count") > 1)
+        .select("producto_id")
+    )
+
+    # Marcar registros duplicados
+    df = (
+        df
+        .join(
+            duplicados
+            .withColumn(
+                "_producto_id_duplicado",
+                F.lit(True)
+            ),
+            on="producto_id",
+            how="left"
+        )
+        .withColumn(
+            "_producto_id_duplicado",
+            F.coalesce(
+                F.col("_producto_id_duplicado"),
+                F.lit(False)
+            )
+        )
+    )
+
+    # Registros rechazados
+    df = df.filter(
+        F.col("_producto_id_duplicado")
+        | F.col("precio_lista").isNull()
+        | (F.col("precio_lista") <= 0)
+    )
+
+    # Motivo del rechazo
+    df = df.withColumn(
+        "motivo_rechazo",
+        F.when(
+            F.col("_producto_id_duplicado"),
+            F.lit("producto_id_duplicado")
+        )
+        .when(
+            F.col("precio_lista").isNull(),
+            F.lit("precio_lista_nulo")
+        )
+        .when(
+            F.col("precio_lista") <= 0,
+            F.lit("precio_lista_menor_igual_cero")
+        )
+        .otherwise(
+            F.lit("otro")
+        )
+    )
 
     return (
         df
-        .filter(
-            F.col("_producto_id_duplicado")
-            | F.col("precio_lista").isNull()
-            | (F.col("precio_lista") <= 0)
-        )
-        .withColumn(
-            "motivo_rechazo",
-            F.when(
-                F.col("_producto_id_duplicado"),
-                F.lit("producto_id_duplicado")
-            )
-            .when(
-                F.col("precio_lista").isNull(),
-                F.lit("precio_lista_nulo")
-            )
-            .when(
-                F.col("precio_lista") <= 0,
-                F.lit("precio_lista_menor_igual_cero")
-            )
-            .otherwise(
-                F.lit("otro")
-            )
-        )
         .withColumn(
             "fecha_rechazo",
             F.current_timestamp()
