@@ -129,3 +129,24 @@ def devoluciones_bronze():
             F.lit("devoluciones_inicial")
         )
     )
+
+@dp.table(
+    name="tracking_bronze",
+    comment="Tracking de envíos ingerido desde Azure SQL mediante Lakehouse Federation"
+)
+def tracking_bronze():
+
+    return (
+        spark.read.table(
+            "electrocasa_tracking.dbo.TrackingEnvios"
+        )
+        .withColumn("fecha_ingestion", F.current_timestamp())
+        .withColumn(
+            "sistema_origen",
+            F.lit("azure_sql_tracking")
+        )
+        .withColumn(
+            "batch_id",
+            F.lit("tracking_inicial")
+        )
+    )
