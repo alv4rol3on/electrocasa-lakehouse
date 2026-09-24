@@ -4,9 +4,16 @@ resources:
       name: ElectroCasa Job
 
       tasks:
+
         - task_key: ingest_catalogo
           sql_task:
             file:
               path: ../src/electrocasa/utils/ingest_catalogo.sql
               source: WORKSPACE
             warehouse_id: bb69341e7dac12fe
+
+        - task_key: electrocasa_pipeline
+          depends_on:
+            - task_key: ingest_catalogo
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.electrocasa_pipeline.id}
