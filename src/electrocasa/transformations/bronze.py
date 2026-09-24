@@ -65,3 +65,35 @@ def empleados_bronze():
             F.lit("empleados_inicial")
         )
     )
+
+@dp.table(
+    name="resenas_bronze",
+    comment="Reseñas de clientes ingeridas desde JSON mediante Auto Loader"
+)
+def resenas_bronze():
+
+    df = (
+        spark.readStream
+        .format("cloudFiles")
+        .option("cloudFiles.format", "json")
+        .option(
+            "cloudFiles.schemaLocation",
+            "/Volumes/electrocasa/bronze/landing/_schemas/resenas/"
+        )
+        .option("cloudFiles.inferColumnTypes", "true")
+        .option("multiLine", "true")
+        .load("/Volumes/electrocasa/bronze/landing/resenas/")
+    )
+
+    return (
+        df
+        .withColumn("fecha_ingestion", F.current_timestamp())
+        .withColumn(
+            "sistema_origen",
+            F.lit("resenas.json")
+        )
+        .withColumn(
+            "batch_id",
+            F.lit("resenas_inicial")
+        )
+    )
