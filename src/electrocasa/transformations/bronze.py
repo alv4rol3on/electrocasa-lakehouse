@@ -138,7 +138,7 @@ def tracking_bronze():
 
     return (
         spark.read.table(
-            "electrocasa_tracking.dbo.TrackingEnvios"
+            "trackingenvios_catalog.dbo.TrackingEnvios"
         )
         .withColumn("fecha_ingestion", F.current_timestamp())
         .withColumn(
