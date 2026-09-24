@@ -3,6 +3,10 @@ resources:
     electrocasa_job:
       name: ElectroCasa Job
 
+      email_notifications:
+        on_failure:
+          - LZ4lv4roJoaqu1n@outlook.com
+
       tasks:
         - task_key: ingest_catalogo
 
