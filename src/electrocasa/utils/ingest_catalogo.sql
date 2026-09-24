@@ -1,4 +1,3 @@
-%sql
 COPY INTO electrocasa.bronze.catalogo_bronze
 FROM (
     SELECT
