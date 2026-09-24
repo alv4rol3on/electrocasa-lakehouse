@@ -1,1 +1,13 @@
+resources:
+  pipelines:
+    electrocasa_pipeline:
+      name: ElectroCasa Pipeline
 
+      serverless: true
+
+      catalog: electrocasa
+      schema: bronze
+
+      libraries:
+        - glob:
+            include: ../src/electrocasa/transformations/**
