@@ -51,7 +51,7 @@ def normalizar_categoria(df):
 # ================================================================
 
 @dp.materialized_view(
-    name="catalogo_silver",
+    name="electrocasa.silver.catalogo_silver",
     comment="Catálogo limpio, normalizado y sin productos duplicados"
 )
 @dp.expect_or_drop(
@@ -94,7 +94,7 @@ def catalogo_silver():
 # ================================================================
 
 @dp.materialized_view(
-    name="catalogo_quarantine",
+    name="electrocasa.silver.catalogo_quarantine",
     comment="Registros de catálogo rechazados por reglas de calidad"
 )
 def catalogo_quarantine():
