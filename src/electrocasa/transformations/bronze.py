@@ -97,3 +97,35 @@ def resenas_bronze():
             F.lit("resenas_inicial")
         )
     )
+
+@dp.table(
+    name="devoluciones_bronze",
+    comment="Devoluciones originales ingeridas desde CSV mediante Auto Loader"
+)
+def devoluciones_bronze():
+
+    df = (
+        spark.readStream
+        .format("cloudFiles")
+        .option("cloudFiles.format", "csv")
+        .option("cloudFiles.inferColumnTypes", "true")
+        .option(
+            "cloudFiles.schemaLocation",
+            "/Volumes/electrocasa/bronze/landing/_schemas/devoluciones/"
+        )
+        .option("header", "true")
+        .load("/Volumes/electrocasa/bronze/landing/devoluciones/")
+    )
+
+    return (
+        df
+        .withColumn("fecha_ingestion", F.current_timestamp())
+        .withColumn(
+            "sistema_origen",
+            F.lit("devoluciones.csv")
+        )
+        .withColumn(
+            "batch_id",
+            F.lit("devoluciones_inicial")
+        )
+    )
