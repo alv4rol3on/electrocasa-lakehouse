@@ -14,8 +14,11 @@ from pyspark.sql import functions as F
     "fecha_actualizacion_valida",
     "fecha_actualizacion IS NOT NULL"
 )
+@dp.expect_or_drop(
+    "estado_entrega_valido",
+    "estado_entrega IN ('en_transito', 'pendiente', 'entregado', 'devuelto')"
+)
 def tracking_envios_silver():
-
     df = spark.read.table(
         "electrocasa.bronze.tracking_bronze"
     )

@@ -3,6 +3,11 @@ resources:
     electrocasa_job:
       name: ElectroCasa Job
 
+      schedule:
+        quartz_cron_expression: "0 0 8 * * ?"
+        timezone_id: "America/Lima"
+        pause_status: UNPAUSED
+
       email_notifications:
         on_failure:
           - LZ4lv4roJoaqu1n@outlook.com
