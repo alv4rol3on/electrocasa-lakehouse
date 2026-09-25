@@ -55,6 +55,8 @@ El objetivo del proyecto es centralizar estas fuentes en Azure Databricks para o
                       Reseñas negativas
                         por categoría
 
+```
+
 # 3. Fuentes de datos
 El proyecto integra seis fuentes:
 ![image_1790299626918.png](./image_1790299626918.png "image_1790299626918.png")
